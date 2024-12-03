@@ -1,0 +1,87 @@
+const int pirPin = 5;  // Digital pin connected to the PIR sensor
+const int ledPin = 13; // Digital pin connected to an LED or buzzer
+
+// Variables
+int pirState = LOW;            // To store PIR sensor state
+unsigned long motionStart = 0; // Start time for motion detection
+unsigned long motionDuration = 0; // To track how long motion lasts
+
+void setup() {
+  pinMode(pirPin, INPUT);  // Set PIR sensor pin as input
+  pinMode(ledPin, OUTPUT); // Set LED or buzzer pin as output
+  Serial.begin(9600);      // Initialize serial communication for debugging
+  delay(5000);             // Stabilization delay for PIR sensor
+
+  Serial.println("PIR sensor motion detection");
+}
+
+void loop() {
+  pirState = digitalRead(pirPin); // Read PIR sensor state (HIGH or LOW)
+
+  if (pirState == HIGH) {
+    // Motion detected
+    if (motionStart == 0) {
+      motionStart = millis(); // Record the start of the motion
+      Serial.println("Motion detected!");
+    }
+
+    digitalWrite(ledPin, HIGH); // Turn on LED/buzzer during motion
+  } else if (motionStart > 0) {
+    // Motion ended
+    motionDuration = millis() - motionStart; // Calculate motion duration
+    Serial.print("Motion ended. Duration: ");
+    Serial.print(motionDuration);
+    Serial.println(" ms");
+
+    // Rule-based classification
+    classifyMotion(motionDuration);
+
+    // Reset for the next motion event
+    motionStart = 0;
+    motionDuration = 0;
+    digitalWrite(ledPin, LOW); // Turn off LED/buzzer after classification
+  } else {
+    // No motion detected
+    digitalWrite(ledPin, LOW); // Ensure LED/buzzer is off
+    delay(100); // Small delay to reduce polling rate
+  }
+}
+
+// Function to classify the motion based on duration
+void classifyMotion(unsigned long duration) {
+  if (duration > 1000 && duration <= 3000) {
+    Serial.println("Classification: Car detected.");
+    actionForCar();
+  } else if (duration > 3000) {
+    Serial.println("Classification: Human detected.");
+    actionForHuman();
+  } else {
+    Serial.println("Classification: Small Object detected.");
+    actionForObject();
+  }
+}
+
+// Action for human detection
+void actionForHuman() {
+  Serial.println("Human detected! Activating alert.");
+  digitalWrite(ledPin, HIGH);  // Turn on LED/buzzer
+  delay(5000);                 // Keep it on for 5 seconds
+  digitalWrite(ledPin, LOW);   // Turn off LED/buzzer
+}
+
+// Action for car detection
+void actionForCar() {
+  Serial.println("Car detected! Flashing LED rapidly.");
+  for (int i = 0; i < 5; i++) {
+    digitalWrite(ledPin, HIGH);
+    delay(200);
+    digitalWrite(ledPin, LOW);
+    delay(200);
+  }
+}
+
+// Action for small object detection
+void actionForObject() {
+  Serial.println("Object detected! No alert triggered.");
+  digitalWrite(ledPin, LOW);  // No action for objects
+}
